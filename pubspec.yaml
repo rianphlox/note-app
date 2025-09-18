@@ -17,21 +17,21 @@ dependencies:
 
   # Core functionality
   intl: ^0.18.1                    # Date formatting and internationalization
-  shared_preferences: ^2.2.2      # Local storage for settings
-  path_provider: ^2.1.1           # File system paths
+  shared_preferences: ^2.2.2       # Local storage for settings
+  path_provider: ^2.1.1            # File system paths
   
   # Database & Storage
-  sqflite: ^2.3.0                 # SQLite database for note persistence
+  sqflite: ^2.3.0                  # SQLite database for note persistence
   
   # UI & Icons
-  cupertino_icons: ^1.0.6         # iOS-style icons
+  cupertino_icons: ^1.0.6          # iOS-style icons
   
   # Utilities
-  share_plus: ^7.2.1              # Share notes functionality
-  url_launcher: ^6.2.1            # Launch URLs and external apps
+  share_plus: ^7.2.1               # Share notes functionality
+  url_launcher: ^6.2.1             # Launch URLs and external apps
   
   # State Management
-  provider: ^6.1.1                # State management solution
+  provider: ^6.1.1                 # State management solution
 
 dev_dependencies:
   flutter_test:
@@ -40,17 +40,18 @@ dev_dependencies:
   # Linting and code quality
   flutter_lints: ^3.0.0
 
+  # 📌 Add flutter_launcher_icons
+  flutter_launcher_icons: ^0.13.1
+
 # Flutter configuration
 flutter:
   uses-material-design: true
 
-  # App assets (uncomment and add your assets)
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
-  #   - assets/sounds/
+  # App assets
+  assets:
+    - assets/icon/note.png   # 📌 Added your note.png icon
 
-  # Custom fonts (uncomment to use custom fonts)
+  # Custom fonts (optional, uncomment if needed)
   # fonts:
   #   - family: SF Pro Display
   #     fonts:
@@ -61,3 +62,11 @@ flutter:
   #         weight: 600
   #       - asset: fonts/SFProDisplay-Bold.ttf
   #         weight: 700
+
+# 📌 flutter_launcher_icons config
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/note.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon/note.png"
