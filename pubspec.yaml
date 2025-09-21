@@ -17,21 +17,21 @@ dependencies:
 
   # Core functionality
   intl: ^0.18.1                    # Date formatting and internationalization
-  shared_preferences: ^2.2.2      # Local storage for settings
-  path_provider: ^2.1.1           # File system paths
+  shared_preferences: ^2.2.2       # Local storage for settings
+  path_provider: ^2.1.1            # File system paths
   
   # Database & Storage
-  sqflite: ^2.3.0                 # SQLite database for note persistence
+  sqflite: ^2.3.0                  # SQLite database for note persistence
   
   # UI & Icons
-  cupertino_icons: ^1.0.6         # iOS-style icons
+  cupertino_icons: ^1.0.6          # iOS-style icons
   
   # Utilities
-  share_plus: ^7.2.1              # Share notes functionality
-  url_launcher: ^6.2.1            # Launch URLs and external apps
+  share_plus: ^7.2.1               # Share notes functionality
+  url_launcher: ^6.2.1             # Launch URLs and external apps
   
   # State Management
-  provider: ^6.1.1                # State management solution
+  provider: ^6.1.1                 # State management solution
 
 dev_dependencies:
   flutter_test:
@@ -43,7 +43,6 @@ dev_dependencies:
   # App icon generator
   flutter_launcher_icons: ^0.13.1
 
-# Flutter configuration
 flutter:
   uses-material-design: true
 
@@ -51,7 +50,7 @@ flutter:
   assets:
     - assets/icon/
 
-  # Custom fonts (uncomment to use custom fonts)
+  # Custom fonts (optional)
   # fonts:
   #   - family: SF Pro Display
   #     fonts:
@@ -63,17 +62,17 @@ flutter:
   #       - asset: fonts/SFProDisplay-Bold.ttf
   #         weight: 700
 
-# App icon configuration
+# App icon configuration (flutter_launcher_icons)
 flutter_icons:
   android: true
   ios: true
   image_path: "assets/icon/note.png"
   min_sdk_android: 21
-  
-  # Optional: Different icons for different platforms
-  # android: "assets/icon/android_icon.png"
-  # ios: "assets/icon/ios_icon.png"
-  
-  # Optional: Adaptive icon for Android (API 26+)
+
+  # Adaptive icon for Android (API 26+)
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "assets/icon/note.png"
+
+  # Optional: Different icons per platform
+  # image_path_android: "assets/icon/android_icon.png"
+  # image_path_ios: "assets/icon/ios_icon.png"
