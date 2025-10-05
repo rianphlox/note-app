@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 void main() {
   runApp(MyApp());
@@ -12,12 +13,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Qnotes - Advanced Notes App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.orange,
         fontFamily: 'SF Pro Display',
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.orange,
         fontFamily: 'SF Pro Display',
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Color(0xFF1C1C1E),
@@ -565,41 +566,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          ..._tabs.asMap().entries.map((entry) {
-            int index = entry.key;
-            String tab = entry.value;
-            bool isSelected = _selectedTabIndex == index;
-            
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedTabIndex = index;
-                });
-              },
-              child: Container(
-                margin: EdgeInsets.only(right: 16),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : (_isDarkMode ? Color(0xFF2C2C2E) : Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  tab,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.grey.shade600),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _tabs.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String tab = entry.value;
+                  bool isSelected = _selectedTabIndex == index;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedTabIndex = index;
+                      });
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(right: 16),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? Color(0xFFEECB38) : (_isDarkMode ? Color(0xFF2C2C2E) : Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        tab,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.grey.shade600),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-            );
-          }).toList(),
-          Spacer(),
+            ),
+          ),
+          SizedBox(width: 8),
           PopupMenuButton<ViewMode>(
             icon: Icon(
-              _currentViewMode == ViewMode.grid 
-                ? Icons.grid_view 
-                : _currentViewMode == ViewMode.masonry 
-                  ? Icons.view_quilt 
+              _currentViewMode == ViewMode.grid
+                ? Icons.grid_view
+                : _currentViewMode == ViewMode.masonry
+                  ? Icons.view_quilt
                   : Icons.view_list,
               color: _isDarkMode ? Colors.white70 : Colors.grey.shade600,
             ),
@@ -681,115 +689,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 200,
-            height: 200,
-            child: Stack(
-              children: [
-                Positioned(
-                  bottom: 0,
-                  left: 50,
-                  child: Container(
-                    width: 100,
-                    height: 120,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFDBC4),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                top: 5,
-                                left: 8,
-                                right: 8,
-                                child: Container(
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFF2D3748),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                              ),
-                              Center(
-                                child: Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Container(
-                          width: 60,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: _isDarkMode ? Color(0xFF2C2C2E) : Colors.white,
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(top: 20, left: 10, child: _buildFloatingNote()),
-                Positioned(top: 40, right: 20, child: _buildFloatingNote()),
-                Positioned(bottom: 80, left: 20, child: _buildFloatingNote()),
-              ],
-            ),
-          ),
-          SizedBox(height: 40),
-          Container(
             margin: EdgeInsets.symmetric(horizontal: 40),
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.blue,
+              color: Color(0xFFEECB38),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
+                  color: Color(0xFFEECB38).withOpacity(0.3),
                   blurRadius: 10,
                   offset: Offset(0, 4),
                 ),
               ],
             ),
-            child: Stack(
-              children: [
-                Text(
-                  _searchQuery.isNotEmpty 
-                    ? 'No notes found for "$_searchQuery"'
-                    : _selectedTags.isNotEmpty
-                      ? 'No notes with selected tags'
-                      : _showFavoritesOnly
-                        ? 'No favorite notes yet'
-                        : 'Tap to add your first note',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                Positioned(
-                  top: -10,
-                  right: -10,
-                  child: Icon(Icons.star, color: Colors.yellow.shade300, size: 16),
-                ),
-                Positioned(
-                  bottom: -5,
-                  left: -5,
-                  child: Icon(Icons.star, color: Colors.yellow.shade300, size: 12),
-                ),
-              ],
+            child: Text(
+              _searchQuery.isNotEmpty
+                ? 'No notes found for "$_searchQuery"'
+                : _selectedTags.isNotEmpty
+                  ? 'No notes with selected tags'
+                  : _showFavoritesOnly
+                    ? 'No favorite notes yet'
+                    : 'Tap to add your first note',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
           Container(
@@ -981,14 +907,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: note.tags.map((tag) => Container(
                   padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
+                    color: Color(0xFFEECB38).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '#$tag',
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.blue,
+                      color: Color(0xFFEECB38),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1048,11 +974,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: Color(0xFFEECB38),
                             ),
                           ),
                           TextSpan(
-                            text: 'notes',
+                            text: 'Pad',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -1081,7 +1007,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: _isDarkMode ? Colors.white70 : Colors.grey.shade600,
                 ),
                 title: Text(
-                  'All Notes (${_notes.where((n) => !n.isDeleted && !n.isArchived).length})',
+                  'All Notes',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -1112,42 +1038,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
               
-              _buildDrawerItem(Icons.access_time_outlined, 'Reminders (${_getRemindersCount()})', () {
+              _buildDrawerItem(Icons.access_time_outlined, 'Reminders', () {
                 Navigator.pop(context);
                 _showRemindersDialog();
               }),
-              
-              _buildDrawerItem(Icons.star_outline, 'Favorites (${_getFavoritesCount()})', () {
+
+              _buildDrawerItem(Icons.star_outline, 'Favorites', () {
                 setState(() {
                   _showFavoritesOnly = true;
                   _selectedTabIndex = 0;
                 });
                 Navigator.pop(context);
               }),
-              
-              _buildDrawerItem(Icons.tag, 'Tags (${_allTags.length})', () {
-                Navigator.pop(context);
-                _showTagsDialog();
-              }),
-              
-              _buildDrawerItem(Icons.archive_outlined, 'Archive (${_getArchivedCount()})', () {
+
+              _buildDrawerItem(Icons.archive_outlined, 'Archive', () {
                 Navigator.pop(context);
                 _showArchivedNotes();
               }),
-              
-              _buildDrawerItem(Icons.delete_outline, 'Trash (${_trashedNotes.length})', () {
+
+              _buildDrawerItem(Icons.delete_outline, 'Trash', () {
                 Navigator.pop(context);
                 _showTrashDialog();
-              }),
-              
-              _buildDrawerItem(Icons.widgets_outlined, 'Statistics', () {
-                Navigator.pop(context);
-                _showStatistics();
-              }),
-              
-              _buildDrawerItem(Icons.sync, 'Backup & Sync', () {
-                Navigator.pop(context);
-                _showBackupDialog();
               }),
               
               _buildDrawerItem(Icons.settings, 'Settings', () {
@@ -1203,12 +1114,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: 56,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.lightBlue, Colors.blue],
+                colors: [Color(0xFFEECB38), Color(0xFFEECB38)],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.lightBlue.withOpacity(0.3),
+                  color: Color(0xFFEECB38).withOpacity(0.3),
                   blurRadius: 15,
                   offset: Offset(0, 8),
                 ),
@@ -1739,6 +1650,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isItalic = false;
   bool _isUnderlined = false;
   final List<String> _categories = ['Uncategorized', 'Home', 'Work', 'Personal', 'Ideas', 'Todo'];
+  Timer? _saveTimer;
+  bool _hasUnsavedChanges = false;
 
   @override
   void initState() {
@@ -1753,32 +1666,74 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _selectedTags = List.from(widget.existingNote?.tags ?? []);
     _selectedPriority = widget.existingNote?.priority ?? Priority.medium;
     _reminderDate = widget.existingNote?.reminderDate;
+
+    // Listen for changes in the text fields
+    _titleController.addListener(_onTextChanged);
+    _contentController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _saveTimer?.cancel();
+    _titleController.removeListener(_onTextChanged);
+    _contentController.removeListener(_onTextChanged);
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
   }
 
+  void _onTextChanged() {
+    setState(() {
+      _hasUnsavedChanges = true;
+    });
+
+    // Cancel previous timer
+    _saveTimer?.cancel();
+
+    // Start new timer for auto-save (2 seconds after user stops typing)
+    _saveTimer = Timer(Duration(seconds: 2), () {
+      _autoSave();
+    });
+  }
+
+  void _autoSave() {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    if ((title.isNotEmpty || content.isNotEmpty) && _hasUnsavedChanges) {
+      widget.onSave(title, content, _selectedCategory, _selectedTags, _selectedPriority, _reminderDate);
+      setState(() {
+        _hasUnsavedChanges = false;
+      });
+    }
+  }
+
   void _saveNote() {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
-    
+
     if (title.isNotEmpty || content.isNotEmpty) {
       widget.onSave(title, content, _selectedCategory, _selectedTags, _selectedPriority, _reminderDate);
-      Navigator.pop(context);
+      setState(() {
+        _hasUnsavedChanges = false;
+      });
     }
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: widget.isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      child: Scaffold(
-        backgroundColor: widget.isDarkMode ? Color(0xFF1C1C1E) : Color(0xFFF5E6D3),
-        body: SafeArea(
+      child: WillPopScope(
+        onWillPop: () async {
+          // Auto-save before navigating back
+          _autoSave();
+          return true;
+        },
+        child: Scaffold(
+          backgroundColor: widget.isDarkMode ? Color(0xFF1C1C1E) : Color(0xFFF5E6D3),
+          body: SafeArea(
           child: Column(
             children: [
               _buildTopBar(),
@@ -1860,6 +1815,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               _buildBottomToolbar(),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -2069,7 +2025,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: isActive ? Colors.blue.withOpacity(0.2) : Colors.transparent,
+          color: isActive ? Color(0xFFEECB38).withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: text != null && text.isNotEmpty
@@ -2085,8 +2041,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               )
             : Icon(
                 icon,
-                color: isActive 
-                  ? Colors.blue 
+                color: isActive
+                  ? Color(0xFFEECB38)
                   : widget.isDarkMode ? Colors.white : Colors.brown.shade600,
                 size: 20,
               ),
