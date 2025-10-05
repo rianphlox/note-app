@@ -684,50 +684,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 40),
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Color(0xFFEECB38),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFFEECB38).withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Text(
-              _searchQuery.isNotEmpty
-                ? 'No notes found for "$_searchQuery"'
-                : _selectedTags.isNotEmpty
-                  ? 'No notes with selected tags'
-                  : _showFavoritesOnly
-                    ? 'No favorite notes yet'
-                    : 'Tap to add your first note',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Container(
-            margin: EdgeInsets.only(left: 80),
-            child: CustomPaint(
-              size: Size(20, 15),
-              painter: SpeechBubbleTail(),
-            ),
-          ),
-        ],
-      ),
-    );
+    return Container();
   }
 
   Widget _buildFloatingNote() {
@@ -939,11 +896,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 Spacer(),
-                Text(
-                  DateFormat('MMM d, HH:mm').format(note.updatedAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _isDarkMode ? Colors.white54 : Colors.grey.shade500,
+                Flexible(
+                  child: Text(
+                    DateFormat('MMM d, HH:mm').format(note.updatedAt),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _isDarkMode ? Colors.white54 : Colors.grey.shade500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
