@@ -1,9 +1,80 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as notifications;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import 'dart:async';
+import 'dart:io';
 
-void main() {
+notifications.FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    notifications.FlutterLocalNotificationsPlugin();
+
+class NotificationService {
+  static Future<void> initialize() async {
+    tz.initializeTimeZones();
+
+    const notifications.AndroidInitializationSettings initializationSettingsAndroid =
+        notifications.AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const notifications.DarwinInitializationSettings initializationSettingsIOS =
+        notifications.DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const notifications.InitializationSettings initializationSettings =
+        notifications.InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  static Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+  }) async {
+    if (scheduledTime.isBefore(DateTime.now())) {
+      print('Cannot schedule notification in the past');
+      return;
+    }
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledTime, tz.local),
+      const notifications.NotificationDetails(
+        android: notifications.AndroidNotificationDetails(
+          'note_reminders',
+          'Note Reminders',
+          channelDescription: 'Notifications for note reminders',
+          importance: notifications.Importance.max,
+          priority: notifications.Priority.high,
+        ),
+        iOS: notifications.DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: notifications.AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          notifications.UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  static Future<void> cancelNotification(int id) async {
+    await flutterLocalNotificationsPlugin.cancel(id);
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
   runApp(MyApp());
 }
 
@@ -11,7 +82,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Qnotes - Advanced Notes App',
+      title: 'QPad - Advanced Notes App',
       theme: ThemeData(
         primarySwatch: Colors.orange,
         fontFamily: 'SF Pro Display',
@@ -191,7 +262,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final isArchived = prefs.getBool('note_${i}_isArchived') ?? false;
       final isDeleted = prefs.getBool('note_${i}_isDeleted') ?? false;
       final priorityIndex = prefs.getInt('note_${i}_priority') ?? 1;
-      
+      final reminderDateString = prefs.getString('note_${i}_reminderDate') ?? '';
+      final reminderDate = reminderDateString.isEmpty ? null : DateTime.tryParse(reminderDateString);
+
       if (id.isNotEmpty) {
         loadedNotes.add(Note(
           id: id,
@@ -205,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           isArchived: isArchived,
           isDeleted: isDeleted,
           priority: Priority.values[priorityIndex.clamp(0, Priority.values.length - 1)],
+          reminderDate: reminderDate,
         ));
       }
     }
@@ -212,8 +286,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       _notes = loadedNotes;
     });
-    
+
+    // Schedule notifications for loaded notes with future reminder dates
+    _scheduleExistingNotifications();
+
     print('Loaded ${loadedNotes.length} notes from storage'); // Debug line
+  }
+
+  void _scheduleExistingNotifications() {
+    for (Note note in _notes) {
+      if (note.reminderDate != null &&
+          note.reminderDate!.isAfter(DateTime.now()) &&
+          !note.isDeleted &&
+          !note.isArchived) {
+        final noteId = int.tryParse(note.id) ?? note.id.hashCode;
+        NotificationService.scheduleNotification(
+          id: noteId,
+          title: 'Reminder: ${note.title}',
+          body: note.content.isEmpty ? 'You have a note reminder' : note.content.length > 100 ? '${note.content.substring(0, 100)}...' : note.content,
+          scheduledTime: note.reminderDate!,
+        );
+      }
+    }
   }
 
   void _saveNotes() async {
@@ -233,6 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       await prefs.remove('note_${i}_isArchived');
       await prefs.remove('note_${i}_isDeleted');
       await prefs.remove('note_${i}_priority');
+      await prefs.remove('note_${i}_reminderDate');
     }
     
     // Save new notes
@@ -251,6 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       await prefs.setBool('note_${i}_isArchived', note.isArchived);
       await prefs.setBool('note_${i}_isDeleted', note.isDeleted);
       await prefs.setInt('note_${i}_priority', note.priority.index);
+      await prefs.setString('note_${i}_reminderDate', note.reminderDate?.toIso8601String() ?? '');
     }
     
     print('Saved ${_notes.length} notes to storage'); // Debug line
@@ -305,9 +401,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _addNote(String title, String content, String category, List<String> tags, Priority priority, DateTime? reminderDate) {
+    final noteId = DateTime.now().millisecondsSinceEpoch.toString();
+
     setState(() {
       _notes.insert(0, Note(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: noteId,
         title: title.isEmpty ? 'Untitled' : title,
         content: content,
         createdAt: DateTime.now(),
@@ -318,10 +416,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         reminderDate: reminderDate,
       ));
     });
-    
+
+    // Schedule notification if reminder is set
+    if (reminderDate != null && reminderDate.isAfter(DateTime.now())) {
+      final noteIdInt = int.tryParse(noteId) ?? noteId.hashCode;
+      NotificationService.scheduleNotification(
+        id: noteIdInt,
+        title: 'Reminder: ${title.isEmpty ? 'Untitled' : title}',
+        body: content.isEmpty ? 'You have a note reminder' : content.length > 100 ? '${content.substring(0, 100)}...' : content,
+        scheduledTime: reminderDate,
+      );
+    }
+
     // Save to persistent storage
     _saveNotes();
-    
+
     // Update all tags list
     for (String tag in tags) {
       if (!_allTags.contains(tag)) {
@@ -336,6 +445,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       final index = _notes.indexWhere((n) => n.id == note.id);
       if (index != -1) {
+        final oldNote = _notes[index];
         _notes[index] = note.copyWith(
           title: title.isEmpty ? 'Untitled' : title,
           content: content,
@@ -345,6 +455,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           priority: priority,
           reminderDate: reminderDate,
         );
+
+        // Handle notification updates
+        final noteId = int.tryParse(note.id) ?? note.id.hashCode;
+
+        // Cancel old notification if it existed
+        if (oldNote.reminderDate != null) {
+          NotificationService.cancelNotification(noteId);
+        }
+
+        // Schedule new notification if reminder is set
+        if (reminderDate != null && reminderDate.isAfter(DateTime.now())) {
+          NotificationService.scheduleNotification(
+            id: noteId,
+            title: 'Reminder: ${title.isEmpty ? 'Untitled' : title}',
+            body: content.isEmpty ? 'You have a note reminder' : content.length > 100 ? '${content.substring(0, 100)}...' : content,
+            scheduledTime: reminderDate,
+          );
+        }
       }
     });
     _saveNotes();
@@ -393,6 +521,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (index != -1) {
         _notes[index] = note.copyWith(isDeleted: true);
         _trashedNotes.add(_notes[index]);
+
+        // Cancel notification if it exists
+        if (note.reminderDate != null) {
+          final noteId = int.tryParse(note.id) ?? note.id.hashCode;
+          NotificationService.cancelNotification(noteId);
+        }
       }
     });
     _saveNotes();
@@ -407,6 +541,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               if (index != -1) {
                 _notes[index] = note.copyWith(isDeleted: false);
                 _trashedNotes.removeWhere((n) => n.id == note.id);
+
+                // Reschedule notification if it was set and is in the future
+                if (note.reminderDate != null && note.reminderDate!.isAfter(DateTime.now())) {
+                  final noteId = int.tryParse(note.id) ?? note.id.hashCode;
+                  NotificationService.scheduleNotification(
+                    id: noteId,
+                    title: 'Reminder: ${note.title}',
+                    body: note.content.isEmpty ? 'You have a note reminder' : note.content.length > 100 ? '${note.content.substring(0, 100)}...' : note.content,
+                    scheduledTime: note.reminderDate!,
+                  );
+                }
               }
             });
             _saveNotes();
@@ -1528,9 +1673,110 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _exportNotes() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Notes exported successfully!')),
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Export Notes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.download),
+              title: Text('Download as Text File'),
+              subtitle: Text('Save all notes to a text file'),
+              onTap: () {
+                Navigator.pop(context);
+                _downloadNotesAsText();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Share Notes'),
+              subtitle: Text('Share notes via messaging or email'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAllNotes();
+              },
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _downloadNotesAsText() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/my_notes_${DateFormat('yyyy_MM_dd_HH_mm').format(DateTime.now())}.txt');
+
+      StringBuffer buffer = StringBuffer();
+      buffer.writeln('My Notes Export');
+      buffer.writeln('Exported on: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}');
+      buffer.writeln('=' * 50);
+      buffer.writeln();
+
+      for (Note note in _notes.where((n) => !n.isDeleted && !n.isArchived)) {
+        buffer.writeln('Title: ${note.title}');
+        buffer.writeln('Category: ${note.category}');
+        buffer.writeln('Created: ${DateFormat('yyyy-MM-dd HH:mm').format(note.createdAt)}');
+        buffer.writeln('Updated: ${DateFormat('yyyy-MM-dd HH:mm').format(note.updatedAt)}');
+        if (note.tags.isNotEmpty) {
+          buffer.writeln('Tags: ${note.tags.map((tag) => '#$tag').join(', ')}');
+        }
+        if (note.reminderDate != null) {
+          buffer.writeln('Reminder: ${DateFormat('yyyy-MM-dd HH:mm').format(note.reminderDate!)}');
+        }
+        buffer.writeln('Priority: ${note.priority.name}');
+        buffer.writeln();
+        buffer.writeln(note.content);
+        buffer.writeln();
+        buffer.writeln('-' * 40);
+        buffer.writeln();
+      }
+
+      await file.writeAsString(buffer.toString());
+
+      Share.shareXFiles([XFile(file.path)], text: 'My exported notes');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Notes exported successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export notes: $e')),
+      );
+    }
+  }
+
+  void _shareAllNotes() {
+    StringBuffer buffer = StringBuffer();
+    buffer.writeln('My Notes');
+    buffer.writeln('Exported on: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}');
+    buffer.writeln();
+
+    for (Note note in _notes.where((n) => !n.isDeleted && !n.isArchived).take(10)) {
+      buffer.writeln('${note.title}');
+      if (note.content.length > 100) {
+        buffer.writeln('${note.content.substring(0, 100)}...');
+      } else {
+        buffer.writeln(note.content);
+      }
+      buffer.writeln();
+    }
+
+    if (_notes.where((n) => !n.isDeleted && !n.isArchived).length > 10) {
+      buffer.writeln('... and ${_notes.where((n) => !n.isDeleted && !n.isArchived).length - 10} more notes');
+    }
+
+    Share.share(buffer.toString(), subject: 'My Notes');
   }
 
   void _importNotes() {
@@ -1828,9 +2074,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 case 'reminder':
                   _setReminder();
                   break;
-                case 'tags':
-                  _manageTags();
-                  break;
                 case 'priority':
                   _setPriority();
                   break;
@@ -1841,7 +2084,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'reminder', child: Row(children: [Icon(Icons.alarm), SizedBox(width: 8), Text('Set Reminder')])),
-              PopupMenuItem(value: 'tags', child: Row(children: [Icon(Icons.tag), SizedBox(width: 8), Text('Manage Tags')])),
               PopupMenuItem(value: 'priority', child: Row(children: [Icon(Icons.priority_high), SizedBox(width: 8), Text('Set Priority')])),
               PopupMenuItem(value: 'export', child: Row(children: [Icon(Icons.share), SizedBox(width: 8), Text('Export Note')])),
             ],
@@ -1967,9 +2209,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           _buildToolbarButton(Icons.mic_outlined, '', false, onTap: () {
             _recordVoice();
           }),
-          _buildToolbarButton(Icons.tag, '', false, onTap: () {
-            _manageTags();
-          }),
           _buildToolbarButton(Icons.format_list_bulleted, '', false, onTap: () {
             _insertBulletList();
           }),
@@ -2088,96 +2327,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
-  void _manageTags() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        List<String> availableTags = List.from(widget.allTags);
-        List<String> tempSelectedTags = List.from(_selectedTags);
-        TextEditingController newTagController = TextEditingController();
-        
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Manage Tags'),
-              content: Container(
-                width: double.maxFinite,
-                height: 300,
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: newTagController,
-                            decoration: InputDecoration(
-                              hintText: 'Add new tag',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.add),
-                          onPressed: () {
-                            if (newTagController.text.isNotEmpty && 
-                                !availableTags.contains(newTagController.text)) {
-                              setDialogState(() {
-                                availableTags.add(newTagController.text);
-                                tempSelectedTags.add(newTagController.text);
-                                newTagController.clear();
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    Expanded(
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: availableTags.map((tag) {
-                          bool isSelected = tempSelectedTags.contains(tag);
-                          return FilterChip(
-                            label: Text('#$tag'),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setDialogState(() {
-                                if (selected) {
-                                  tempSelectedTags.add(tag);
-                                } else {
-                                  tempSelectedTags.remove(tag);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedTags = tempSelectedTags;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _setPriority() {
     showDialog(
@@ -2211,9 +2360,99 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _exportNote() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Note exported successfully!')),
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Export Note',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.download),
+              title: Text('Download as Text File'),
+              subtitle: Text('Save this note to a text file'),
+              onTap: () {
+                Navigator.pop(context);
+                _downloadNoteAsText();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Share Note'),
+              subtitle: Text('Share via messaging or email'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareNote();
+              },
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _downloadNoteAsText() async {
+    try {
+      final title = _titleController.text.trim().isEmpty ? 'Untitled' : _titleController.text.trim();
+      final content = _contentController.text.trim();
+
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = title.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
+      final file = File('${directory.path}/${fileName}_${DateFormat('yyyy_MM_dd_HH_mm').format(DateTime.now())}.txt');
+
+      StringBuffer buffer = StringBuffer();
+      buffer.writeln('Title: $title');
+      buffer.writeln('Category: $_selectedCategory');
+      buffer.writeln('Created: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}');
+      if (_selectedTags.isNotEmpty) {
+        buffer.writeln('Tags: ${_selectedTags.map((tag) => '#$tag').join(', ')}');
+      }
+      if (_reminderDate != null) {
+        buffer.writeln('Reminder: ${DateFormat('yyyy-MM-dd HH:mm').format(_reminderDate!)}');
+      }
+      buffer.writeln('Priority: ${_selectedPriority.name}');
+      buffer.writeln();
+      buffer.writeln('-' * 40);
+      buffer.writeln();
+      buffer.writeln(content);
+
+      await file.writeAsString(buffer.toString());
+
+      Share.shareXFiles([XFile(file.path)], text: 'Note: $title');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Note exported successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export note: $e')),
+      );
+    }
+  }
+
+  void _shareNote() {
+    final title = _titleController.text.trim().isEmpty ? 'Untitled' : _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    StringBuffer buffer = StringBuffer();
+    buffer.writeln(title);
+    buffer.writeln();
+    buffer.writeln(content);
+
+    if (_selectedTags.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('Tags: ${_selectedTags.map((tag) => '#$tag').join(', ')}');
+    }
+
+    Share.share(buffer.toString(), subject: title);
   }
 
   void _addImage() {

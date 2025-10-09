@@ -1,45 +1,95 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart
 .dart_tool/
-.flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
+.claude/
+flutter_*.png
+flutter_export_environment.sh
 
-# Symbolication related
-app.*.symbols
+# Generated plugin registrant
+**/GeneratedPluginRegistrant.*
 
-# Obfuscation related
-app.*.map.json
+# IntelliJ / VS Code
+.idea/
+.vscode/
+*.iml
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/app/key.properties
+android/app/google-services.json
+android/app/google-services.plist
+android/app/release/
+android/app/debug/
+android/.cxx/
+android/build/
+
+# iOS
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/App.framework
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+ios/.symlinks/
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/.generated/
+*.xcuserstate
+*.xcworkspace
+Podfile.lock
+
+# macOS
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Pods/
+macos/Flutter/ephemeral/
+macos/build/
+
+# Web
+lib/generated_plugin_registrant.dart
+
+# Windows
+windows/flutter/ephemeral/
+windows/Runner/GeneratedPluginRegistrant.*
+
+# Linux
+linux/flutter/ephemeral/
+linux/Runner/GeneratedPluginRegistrant.*
+
+# Xcode
+*.xcuserdata
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.hmap
+*.ipa
+*.xcuserdatad
+*.xcworkspace
+
+# Misc
+*.log
+*.tmp
+*.swp
+*.lock
+*.DS_Store
+*.class
+*.pyc
+*.jar
+*.war
+*.ear
+
+# Node / React Native / Expo (optional if you mix JS)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+expo/
+.expo/
+.expo-shared/
+dist/

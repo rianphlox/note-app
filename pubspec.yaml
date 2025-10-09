@@ -1,4 +1,4 @@
-name: qnotes_advanced
+name: qpad
 description: A feature-rich, beautiful note-taking app with advanced functionality
 
 # Prevent publishing to pub.dev
@@ -29,6 +29,8 @@ dependencies:
   # Utilities
   share_plus: ^7.2.1               # Share notes functionality
   url_launcher: ^6.2.1             # Launch URLs and external apps
+  flutter_local_notifications: ^17.2.2  # Local notifications for reminders
+  timezone: ^0.9.4                 # Timezone support for notifications
   
   # State Management
   provider: ^6.1.1                 # State management solution
