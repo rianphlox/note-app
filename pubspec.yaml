@@ -31,6 +31,8 @@ dependencies:
   url_launcher: ^6.2.1             # Launch URLs and external apps
   flutter_local_notifications: ^17.2.2  # Local notifications for reminders
   timezone: ^0.9.4                 # Timezone support for notifications
+  image_picker: ^1.0.8             # Image picking functionality
+  permission_handler: ^11.3.1      # Permissions for camera/storage
   
   # State Management
   provider: ^6.1.1                 # State management solution

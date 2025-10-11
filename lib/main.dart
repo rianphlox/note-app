@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as notifications;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -1855,6 +1857,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isBold = false;
   bool _isItalic = false;
   bool _isUnderlined = false;
+  double _fontSize = 16.0;
   final List<String> _categories = ['Uncategorized', 'Home', 'Work', 'Personal', 'Ideas', 'Todo'];
   Timer? _saveTimer;
   bool _hasUnsavedChanges = false;
@@ -1994,7 +1997,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           controller: _contentController,
                           style: TextStyle(
                             color: widget.isDarkMode ? Colors.white70 : Colors.brown.shade400,
-                            fontSize: 16,
+                            fontSize: _fontSize,
                             height: 1.5,
                             fontWeight: _isBold ? FontWeight.bold : FontWeight.normal,
                             fontStyle: _isItalic ? FontStyle.italic : FontStyle.normal,
@@ -2187,7 +2190,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildToolbarButton(Icons.format_size, 'Aa', false),
+          _buildToolbarButton(Icons.format_size, 'Aa', false, onTap: () {
+            _showFontSizeSelector();
+          }),
           _buildToolbarButton(Icons.format_bold, '', _isBold, onTap: () {
             setState(() {
               _isBold = !_isBold;
@@ -2455,15 +2460,180 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     Share.share(buffer.toString(), subject: title);
   }
 
-  void _addImage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Image attachment feature coming soon!')),
+  void _showFontSizeSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Font Size',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 20),
+            Slider(
+              value: _fontSize,
+              min: 12.0,
+              max: 24.0,
+              divisions: 12,
+              label: _fontSize.round().toString(),
+              onChanged: (double value) {
+                setState(() {
+                  _fontSize = value;
+                });
+              },
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Sample text at ${_fontSize.round()}px',
+              style: TextStyle(fontSize: _fontSize),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Done'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
+  Future<void> _addImage() async {
+    try {
+      // Request permissions
+      final cameraStatus = await Permission.camera.request();
+      final storageStatus = await Permission.storage.request();
+
+      if (cameraStatus.isGranted || storageStatus.isGranted) {
+        showModalBottomSheet(
+          context: context,
+          builder: (context) => Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Add Image',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(Icons.camera_alt),
+                  title: Text('Take Photo'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.photo_library),
+                  title: Text('Choose from Gallery'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Camera and storage permissions are required')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error accessing camera: $e')),
+      );
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source);
+
+      if (image != null) {
+        // For now, just add the image path to the content
+        final currentText = _contentController.text;
+        final newText = '$currentText\n[Image: ${image.name}]';
+        _contentController.text = newText;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image added to note')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
+  }
+
   void _recordVoice() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Voice Recording',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 20),
+            Icon(
+              Icons.mic,
+              size: 60,
+              color: Colors.red,
+            ),
+            SizedBox(height: 10),
+            Text('Tap to add voice note placeholder'),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _addVoiceNotePlaceholder();
+                  },
+                  child: Text('Add Voice Note'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addVoiceNotePlaceholder() {
+    final currentText = _contentController.text;
+    final timestamp = DateFormat('HH:mm').format(DateTime.now());
+    final newText = '$currentText\n🎤 Voice Note - $timestamp';
+    _contentController.text = newText;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Voice recording feature coming soon!')),
+      SnackBar(content: Text('Voice note placeholder added')),
     );
   }
 
